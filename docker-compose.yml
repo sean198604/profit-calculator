@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  profit-calculator:
+    build: .
+    container_name: "7003"
+    ports:
+      - "7003:80"
+    restart: unless-stopped
+    labels:
+      - "com.foreigntrade.type=tool"
+      - "com.foreigntrade.name=profit-calculator"

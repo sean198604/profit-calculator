@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
+<title>外贸利润计算器</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #f0f4f8; color: #1a202c; min-height: 100vh; }
+
+  .header { background: linear-gradient(135deg, #0f4c3a 0%, #1a7a5a 100%); color: white; padding: 20px 0; text-align: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
+  .header h1 { font-size: 22px; font-weight: 700; }
+  .header p { font-size: 12px; opacity: 0.8; margin-top: 4px; }
+
+  .main { max-width: 960px; margin: 0 auto; padding: 18px 16px 60px; }
+
+  .card { background: white; border-radius: 14px; padding: 22px; margin-bottom: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); border: 1px solid #e8ecf1; }
+  .card-title { font-size: 15px; font-weight: 700; color: #0f4c3a; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+
+  /* 分区小标题 */
+  .section-title { font-size: 13px; font-weight: 700; color: #475569; margin: 18px 0 10px; padding-left: 8px; border-left: 3px solid #1a7a5a; }
+  .section-title:first-child { margin-top: 0; }
+
+  .form-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .form-row:last-child { margin-bottom: 0; }
+  .form-group { flex: 1; min-width: 140px; }
+  .form-group.small { flex: 0.6; min-width: 110px; }
+  .form-group label { display: block; font-size: 12px; color: #64748b; margin-bottom: 5px; font-weight: 600; }
+  .form-group input, .form-group select {
+    width: 100%; padding: 10px 12px; border: 2px solid #e2e8f0; border-radius: 10px;
+    font-size: 15px; font-weight: 600; transition: all 0.2s; background: #f8fafc; outline: none;
+    color: #1a202c;
+  }
+  .form-group input:focus, .form-group select:focus { border-color: #1a7a5a; background: white; box-shadow: 0 0 0 3px rgba(26,122,90,0.1); }
+  .form-group input::placeholder { color: #cbd5e1; font-weight: 400; font-style: italic; opacity: 1; }
+  .form-group .hint { font-size: 11px; color: #94a3b8; margin-top: 3px; }
+
+  /* 汇率面板 */
+  .rate-panel { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; padding: 12px 14px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; }
+  .rate-tag { font-size: 12px; color: #166534; font-weight: 700; white-space: nowrap; }
+  .rate-items { display: flex; gap: 12px; flex-wrap: wrap; }
+  .rate-chip { display: flex; align-items: center; gap: 6px; font-size: 14px; color: #334155; background: white; padding: 6px 12px; border-radius: 8px; border: 1px solid #d1d5db; }
+  .rate-chip .flag { font-size: 18px; }
+  .rate-chip .curr-name { font-weight: 600; min-width: 36px; }
+  .rate-chip input { width: 100px; padding: 4px 10px; border: 1px solid #e2e8f0; font-size: 15px; font-weight: 700; text-align: center; background: #f8fafc; outline: none; color: #0f4c3a; border-radius: 6px; }
+  .rate-chip input:focus { border-color: #1a7a5a; background: white; }
+  .rate-status { font-size: 11px; margin-left: auto; display: flex; align-items: center; gap: 6px; }
+  .rate-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .rate-dot.live { background: #22c55e; animation: pulse 2s infinite; }
+  .rate-dot.offline { background: #94a3b8; }
+  .rate-dot.loading { background: #f59e0b; animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+  .rate-note { width: 100%; font-size: 11px; color: #64748b; margin-top: 4px; }
+
+  /* Tab */
+  .tabs { display: flex; gap: 6px; background: #f1f5f9; padding: 4px; border-radius: 12px; margin-bottom: 18px; }
+  .tab { flex: 1; text-align: center; padding: 10px 8px; font-size: 13px; font-weight: 600; color: #64748b; cursor: pointer; border-radius: 9px; transition: all 0.2s; user-select: none; }
+  .tab:hover { color: #1a7a5a; }
+  .tab.active { background: white; color: #0f4c3a; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+
+  .btn-calc {
+    display: block; width: 100%; padding: 14px; background: linear-gradient(135deg, #0f4c3a, #1a7a5a);
+    color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 700;
+    cursor: pointer; transition: all 0.3s; letter-spacing: 2px; margin-top: 6px;
+  }
+  .btn-calc:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(15,76,58,0.35); }
+
+  .hidden { display: none !important; }
+
+  /* 结果 */
+  .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .result-block { border-radius: 14px; padding: 20px; }
+  .result-block.product { background: linear-gradient(135deg, #f0fdf4, #dcfce7); border: 1px solid #86efac; }
+  .result-block.order { background: linear-gradient(135deg, #eff6ff, #dbeafe); border: 1px solid #93c5fd; }
+  .result-block h3 { font-size: 14px; margin-bottom: 12px; }
+  .result-block.product h3 { color: #166534; }
+  .result-block.order h3 { color: #1e40af; }
+
+  .res-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid rgba(0,0,0,0.06); }
+  .res-row:last-child { border: none; }
+  .res-label { font-size: 13px; color: #64748b; }
+  .res-val { font-size: 15px; font-weight: 700; color: #1a202c; }
+  .res-val.profit { font-size: 22px; }
+  .res-val.green { color: #16a34a; }
+  .res-val.red { color: #dc2626; }
+
+  .margin-bar { margin-top: 10px; }
+  .margin-bg { height: 10px; background: #e2e8f0; border-radius: 5px; overflow: hidden; }
+  .margin-fill { height: 100%; border-radius: 5px; transition: width 0.6s; }
+  .margin-fill.green { background: linear-gradient(90deg, #22c55e, #4ade80); }
+  .margin-fill.yellow { background: linear-gradient(90deg, #eab308, #facc15); }
+  .margin-fill.red { background: linear-gradient(90deg, #ef4444, #f87171); }
+  .margin-text { font-size: 12px; color: #64748b; margin-top: 4px; text-align: right; }
+
+  /* 明细 */
+  .detail-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 4px; }
+  .detail-table th { background: #f1f5f9; padding: 10px; text-align: left; font-weight: 600; color: #475569; border: 1px solid #e2e8f0; }
+  .detail-table td { padding: 10px; border: 1px solid #e2e8f0; color: #334155; }
+  .detail-table td.num { text-align: right; font-weight: 600; font-family: 'SF Mono','Menlo',monospace; }
+  .detail-table tr.total { background: #f8fafc; font-weight: 700; }
+  .detail-table tr.total td { border-top: 2px solid #cbd5e1; }
+
+  .note { font-size: 12px; color: #64748b; line-height: 1.8; margin-top: 12px; padding: 12px; background: #f8fafc; border-radius: 8px; }
+  .note b { color: #475569; }
+
+  /* 反向结果大卡 */
+  .rev-result {
+    margin-top: 14px; padding: 22px;
+    background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+    border: 2px solid #86efac; border-radius: 14px;
+  }
+  .rev-result h3 { color: #166534; margin-bottom: 14px; font-size: 15px; }
+  .rev-hero { display:flex; justify-content: space-between; align-items: baseline; padding: 10px 0 14px; border-bottom: 1px dashed #86efac; margin-bottom: 10px; }
+  .rev-hero .lbl { font-size: 13px; color: #166534; font-weight: 600; }
+  .rev-hero .val { font-size: 28px; font-weight: 800; color: #0f4c3a; }
+
+  .footer { text-align: center; font-size: 11px; color: #94a3b8; padding: 20px; line-height: 1.8; }
+
+  @media (max-width: 640px) {
+    .form-row { flex-direction: column; }
+    .form-group, .form-group.small { min-width: 100%; }
+    .result-grid { grid-template-columns: 1fr; }
+    .tabs { flex-direction: column; }
+    .rev-hero { flex-direction: column; align-items: flex-start; gap: 4px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>💰 外贸利润计算器</h1>
+  <p>中国银行现汇买入价 · 支持正向 / 反向双向计算</p>
+</div>
+
+<div class="main">
+
+  <!-- 汇率 -->
+  <div class="card">
+    <div class="card-title">💱 汇率（中国银行现汇买入价，自动获取，可手动修改）</div>
+    <div class="rate-panel">
+      <span class="rate-tag">1 外币 = ? 人民币</span>
+      <div class="rate-items">
+        <div class="rate-chip"><span class="flag">🇺🇸</span> <input type="number" id="rUSD" placeholder="6.8000" step="0.0001"></div>
+        <div class="rate-chip"><span class="flag">🇯🇵</span> <input type="number" id="rJPY" value="0.0478" step="0.0001"></div>
+      </div>
+      <div class="rate-status">
+        <span class="rate-dot loading" id="rateDot"></span>
+        <span id="rateTime">获取中...</span>
+      </div>
+      <div class="rate-note">💡 USD 自动从内部汇率服务获取（中行现汇买入价），JPY 为当前固定值，如需更新请手动修改。</div>
+    </div>
+  </div>
+
+  <!-- 智能计算器（三合一） -->
+  <div class="card">
+    <div class="card-title">🧮 智能计算器</div>
+
+    <div class="tabs">
+      <div class="tab active" data-mode="full" onclick="switchTab('full')">📊 完整利润测算</div>
+      <div class="tab" data-mode="sell2buy" onclick="switchTab('sell2buy')">🎯 销售价 → 反推采购价</div>
+      <div class="tab" data-mode="buy2sell" onclick="switchTab('buy2sell')">🎯 采购价 → 反推销售价</div>
+    </div>
+
+    <!-- 模式一：完整利润测算 -->
+    <div id="modeFull" class="mode-panel">
+      <div class="section-title">📤 销售信息</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>销售单价</label>
+          <input type="number" id="sellPrice" placeholder="例: 12.50" step="0.01">
+        </div>
+        <div class="form-group small">
+          <label>销售币种</label>
+          <select id="sellCurr">
+            <option value="USD" selected>USD 美元</option>
+            <option value="JPY">JPY 日元</option>
+            <option value="CNY">CNY 人民币</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>产品数量</label>
+          <input type="number" id="quantity" placeholder="例: 1000" min="1">
+        </div>
+      </div>
+
+      <div class="section-title">📥 采购信息</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>采购单价（含税）</label>
+          <input type="number" id="buyPrice" placeholder="例: 35.00" step="0.01">
+          <div class="hint">含 13% 增值税的价格</div>
+        </div>
+        <div class="form-group small">
+          <label>采购币种</label>
+          <select id="buyCurr" onchange="toggleRebate()">
+            <option value="CNY" selected>CNY 人民币</option>
+            <option value="USD">USD 美元</option>
+            <option value="JPY">JPY 日元</option>
+          </select>
+        </div>
+        <div class="form-group" id="rebateRateWrap">
+          <label>出口退税率</label>
+          <select id="rebateRate">
+            <option value="0.13" selected>13%</option>
+            <option value="0.10">10%</option>
+            <option value="0.09">9%</option>
+            <option value="0.06">6%</option>
+            <option value="0.05">5%</option>
+            <option value="0.03">3%</option>
+            <option value="0">0%（不退税）</option>
+            <option value="custom">自定义...</option>
+          </select>
+        </div>
+        <div class="form-group hidden" id="customRebateGroup">
+          <label>自定义退税率 (%)</label>
+          <input type="number" id="customRebate" placeholder="例: 13" step="0.1" min="0" max="17">
+        </div>
+      </div>
+
+      <div class="section-title">📋 预估费用（运费、报关、验货等合计）</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>预估总费用</label>
+          <input type="number" id="extraCost" placeholder="例: 2000" step="0.01">
+        </div>
+        <div class="form-group small">
+          <label>费用币种</label>
+          <select id="costCurr">
+            <option value="USD" selected>USD 美元</option>
+            <option value="CNY">CNY 人民币</option>
+            <option value="JPY">JPY 日元</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="btn-calc" onclick="calc()">💰 计算利润</button>
+    </div>
+
+    <!-- 模式二：销售价 → 采购价 -->
+    <div id="modeSell2Buy" class="mode-panel hidden">
+      <div class="section-title">已知销售价，按目标毛利反推采购价</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>销售单价（已知）</label>
+          <input type="number" id="revSellPrice" placeholder="例: 12.50" step="0.01">
+        </div>
+        <div class="form-group small">
+          <label>销售币种</label>
+          <select id="revSellCurr">
+            <option value="USD" selected>USD 美元</option>
+            <option value="JPY">JPY 日元</option>
+            <option value="CNY">CNY 人民币</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>目标毛利率 (%)</label>
+          <input type="number" id="revMarginS2B" placeholder="例: 5" step="0.1">
+        </div>
+        <div class="form-group small">
+          <label>采购币种（输出）</label>
+          <select id="revBuyCurrOut" onchange="toggleRevRebate('s2b')">
+            <option value="CNY" selected>CNY 人民币</option>
+            <option value="USD">USD 美元</option>
+            <option value="JPY">JPY 日元</option>
+          </select>
+        </div>
+        <div class="form-group" id="revRebateWrapS2B">
+          <label>出口退税率</label>
+          <select id="revRebateRateS2B" onchange="toggleRevCustom('s2b')">
+            <option value="0.13" selected>13%</option>
+            <option value="0.10">10%</option>
+            <option value="0.09">9%</option>
+            <option value="0.06">6%</option>
+            <option value="0.05">5%</option>
+            <option value="0.03">3%</option>
+            <option value="0">0%（不退税）</option>
+            <option value="custom">自定义...</option>
+          </select>
+        </div>
+        <div class="form-group hidden" id="revCustomWrapS2B">
+          <label>自定义 (%)</label>
+          <input type="number" id="revCustomRebateS2B" placeholder="例: 13" step="0.1" min="0" max="17">
+        </div>
+      </div>
+      <button class="btn-calc" onclick="reverseCalc('sell2buy')">🔄 反推采购价</button>
+    </div>
+
+    <!-- 模式三：采购价 → 销售价 -->
+    <div id="modeBuy2Sell" class="mode-panel hidden">
+      <div class="section-title">已知采购价，按目标毛利反推销售价</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>采购单价（已知，含税）</label>
+          <input type="number" id="revBuyPrice" placeholder="例: 35.00" step="0.01">
+          <div class="hint">人民币采购为含 13% 增值税价</div>
+        </div>
+        <div class="form-group small">
+          <label>采购币种</label>
+          <select id="revBuyCurr" onchange="toggleRevRebate('b2s')">
+            <option value="CNY" selected>CNY 人民币</option>
+            <option value="USD">USD 美元</option>
+            <option value="JPY">JPY 日元</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>目标毛利率 (%)</label>
+          <input type="number" id="revMarginB2S" placeholder="例: 5" step="0.1">
+        </div>
+        <div class="form-group small">
+          <label>销售币种（输出）</label>
+          <select id="revSellCurrOut">
+            <option value="USD" selected>USD 美元</option>
+            <option value="JPY">JPY 日元</option>
+            <option value="CNY">CNY 人民币</option>
+          </select>
+        </div>
+        <div class="form-group" id="revRebateWrapB2S">
+          <label>出口退税率</label>
+          <select id="revRebateRateB2S" onchange="toggleRevCustom('b2s')">
+            <option value="0.13" selected>13%</option>
+            <option value="0.10">10%</option>
+            <option value="0.09">9%</option>
+            <option value="0.06">6%</option>
+            <option value="0.05">5%</option>
+            <option value="0.03">3%</option>
+            <option value="0">0%（不退税）</option>
+            <option value="custom">自定义...</option>
+          </select>
+        </div>
+        <div class="form-group hidden" id="revCustomWrapB2S">
+          <label>自定义 (%)</label>
+          <input type="number" id="revCustomRebateB2S" placeholder="例: 13" step="0.1" min="0" max="17">
+        </div>
+      </div>
+      <button class="btn-calc" onclick="reverseCalc('buy2sell')">🔄 反推销售价</button>
+    </div>
+
+    <!-- 反向结果 -->
+    <div id="revResult" class="rev-result hidden">
+      <h3 id="revResultTitle">🎯 推算结果</h3>
+      <div class="rev-hero">
+        <span class="lbl" id="revResultLabel">建议价格</span>
+        <span class="val" id="revResultVal">-</span>
+      </div>
+      <div class="res-row"><span class="res-label">折合人民币</span><span class="res-val" id="revResultCNY">-</span></div>
+      <div class="res-row"><span class="res-label">折合美元</span><span class="res-val" id="revResultUSD">-</span></div>
+      <div class="note" id="revNote"></div>
+    </div>
+
+    <!-- 正向结果 -->
+    <div id="results" class="hidden" style="margin-top:18px;">
+      <div class="section-title">📊 利润总览（结果以美元显示）</div>
+      <div class="result-grid">
+        <div class="result-block product">
+          <h3>📦 单个产品利润</h3>
+          <div class="res-row"><span class="res-label">销售收入</span><span class="res-val" id="r_uRev">-</span></div>
+          <div class="res-row"><span class="res-label">采购成本</span><span class="res-val" id="r_uCost">-</span></div>
+          <div class="res-row" id="r_uRebateRow"><span class="res-label">退税收入</span><span class="res-val green" id="r_uRebate">-</span></div>
+          <div class="res-row"><span class="res-label">分摊费用</span><span class="res-val" id="r_uFee">-</span></div>
+          <div class="res-row" style="border-top:2px solid #86efac; margin-top:4px; padding-top:10px;">
+            <span class="res-label" style="font-weight:700;font-size:14px;">单件利润</span>
+            <span class="res-val profit" id="r_uProfit">-</span>
+          </div>
+          <div class="margin-bar">
+            <div class="margin-bg"><div class="margin-fill" id="r_uBar" style="width:0%"></div></div>
+            <div class="margin-text" id="r_uMargin">利润率 -</div>
+          </div>
+        </div>
+        <div class="result-block order">
+          <h3>📋 整单利润</h3>
+          <div class="res-row"><span class="res-label">销售总收入</span><span class="res-val" id="r_tRev">-</span></div>
+          <div class="res-row"><span class="res-label">采购总成本</span><span class="res-val" id="r_tCost">-</span></div>
+          <div class="res-row" id="r_tRebateRow"><span class="res-label">退税总额</span><span class="res-val green" id="r_tRebate">-</span></div>
+          <div class="res-row"><span class="res-label">预估总费用</span><span class="res-val" id="r_tFee">-</span></div>
+          <div class="res-row" style="border-top:2px solid #93c5fd; margin-top:4px; padding-top:10px;">
+            <span class="res-label" style="font-weight:700;font-size:14px;">订单利润</span>
+            <span class="res-val profit" id="r_tProfit">-</span>
+          </div>
+          <div class="margin-bar">
+            <div class="margin-bg"><div class="margin-fill" id="r_tBar" style="width:0%"></div></div>
+            <div class="margin-text" id="r_tMargin">利润率 -</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title" style="margin-top:18px;">🧾 计算明细</div>
+      <table class="detail-table">
+        <thead><tr><th>项目</th><th>原始金额</th><th>汇率</th><th style="text-align:right">折算美元</th></tr></thead>
+        <tbody id="detailBody"></tbody>
+      </table>
+      <div class="note" id="calcNote"></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="footer">
+  📌 USD 汇率取自中国银行现汇买入价，JPY 为固定参考值，实际结汇请以银行当日牌价为准<br>
+  退税公式：采购含税价 ÷ 1.13 × 退税率（增值税率 13%）
+</div>
+
+<script>
+// ============ 汇率（1 外币 = ? CNY）============
+// JPY 固定值，USD 从 5050 服务自动拉取
+const JPY_FIXED = 0.0478;
+let rates = { CNY: 1, USD: 0, JPY: JPY_FIXED };
+const VAT = 0.13;
+
+function readRates() {
+  rates.USD = parseFloat(document.getElementById('rUSD').value) || 0;
+  rates.JPY = parseFloat(document.getElementById('rJPY').value) || JPY_FIXED;
+}
+
+function ratesReady(needJPY) {
+  if (!rates.USD || rates.USD <= 0) { alert('USD 汇率未就绪，请稍候或手动输入'); return false; }
+  return true;
+}
+
+function toCNY(amount, curr) { return curr === 'CNY' ? amount : amount * (rates[curr] || 1); }
+function fromCNY(cnyAmount, curr) { return curr === 'CNY' ? cnyAmount : cnyAmount / (rates[curr] || 1); }
+function toUSD(cnyAmount) { return cnyAmount / rates.USD; }
+function fmtUSD(v) {
+  const sign = v < 0 ? '-' : '';
+  return sign + '$ ' + Math.abs(v).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+function fmtCurr(v, curr) {
+  const sym = { CNY:'¥', USD:'$', JPY:'¥' };
+  return (sym[curr]||'') + ' ' + v.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+// ---- 从 5050 服务拉取 USD 汇率（通过 nginx 反代，避免跨域）----
+async function fetchUSDRate() {
+  const dot = document.getElementById('rateDot');
+  const timeEl = document.getElementById('rateTime');
+
+  // 先设置 JPY 固定值
+  document.getElementById('rJPY').value = JPY_FIXED;
+  rates.JPY = JPY_FIXED;
+
+  try {
+    const resp = await fetch('/api/exchange-rate', { signal: AbortSignal.timeout(5000) });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    if (data && data.length > 0) {
+      const latest = data[data.length - 1];
+      // 5050 返回的 rate 为「100 USD = ? CNY」格式（如 680.79），需除以 100
+      const rawRate = parseFloat(latest.rate);
+      const usdRate = rawRate > 100 ? rawRate / 100 : rawRate; // 兼容两种格式
+      if (usdRate > 0) {
+        rates.USD = usdRate;
+        document.getElementById('rUSD').value = usdRate.toFixed(4);
+        dot.className = 'rate-dot live';
+        const dateStr = latest.date || '';
+        timeEl.textContent = `${dateStr} 已更新`;
+        return;
+      }
+    }
+    throw new Error('数据为空');
+  } catch(e) {
+    // 获取失败，使用默认值 6.8
+    const DEFAULT_USD = 6.8;
+    rates.USD = DEFAULT_USD;
+    document.getElementById('rUSD').value = DEFAULT_USD.toFixed(4);
+    dot.className = 'rate-dot offline';
+    timeEl.textContent = '已离线，使用默认值 6.8';
+  }
+}
+
+// 页面加载时初始化
+window.addEventListener('DOMContentLoaded', () => {
+  fetchUSDRate();
+  toggleRebate();
+  toggleRevRebate('s2b');
+  toggleRevRebate('b2s');
+});
+
+// ---- Tab 切换 ----
+function switchTab(mode) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
+  document.getElementById('modeFull').classList.toggle('hidden', mode !== 'full');
+  document.getElementById('modeSell2Buy').classList.toggle('hidden', mode !== 'sell2buy');
+  document.getElementById('modeBuy2Sell').classList.toggle('hidden', mode !== 'buy2sell');
+  if (mode === 'full') {
+    document.getElementById('revResult').classList.add('hidden');
+  } else {
+    document.getElementById('results').classList.add('hidden');
+    document.getElementById('revResult').classList.add('hidden');
+  }
+}
+
+// ---- 退税控制 ----
+document.getElementById('rebateRate').addEventListener('change', function() {
+  document.getElementById('customRebateGroup').classList.toggle('hidden', this.value !== 'custom');
+});
+function toggleRebate() {
+  const show = document.getElementById('buyCurr').value === 'CNY';
+  document.getElementById('rebateRateWrap').classList.toggle('hidden', !show);
+  if (!show) document.getElementById('customRebateGroup').classList.add('hidden');
+}
+function getRebateRate() {
+  const sel = document.getElementById('rebateRate').value;
+  if (sel === 'custom') return (parseFloat(document.getElementById('customRebate').value) || 0) / 100;
+  return parseFloat(sel) || 0;
+}
+
+// 反向面板退税控制
+function toggleRevRebate(which) {
+  if (which === 's2b') {
+    const cny = document.getElementById('revBuyCurrOut').value === 'CNY';
+    document.getElementById('revRebateWrapS2B').classList.toggle('hidden', !cny);
+    if (!cny) document.getElementById('revCustomWrapS2B').classList.add('hidden');
+  } else {
+    const cny = document.getElementById('revBuyCurr').value === 'CNY';
+    document.getElementById('revRebateWrapB2S').classList.toggle('hidden', !cny);
+    if (!cny) document.getElementById('revCustomWrapB2S').classList.add('hidden');
+  }
+}
+function toggleRevCustom(which) {
+  if (which === 's2b') {
+    document.getElementById('revCustomWrapS2B').classList.toggle('hidden', document.getElementById('revRebateRateS2B').value !== 'custom');
+  } else {
+    document.getElementById('revCustomWrapB2S').classList.toggle('hidden', document.getElementById('revRebateRateB2S').value !== 'custom');
+  }
+}
+function getRevRebateRate(which) {
+  const selId = which === 's2b' ? 'revRebateRateS2B' : 'revRebateRateB2S';
+  const customId = which === 's2b' ? 'revCustomRebateS2B' : 'revCustomRebateB2S';
+  const sel = document.getElementById(selId).value;
+  if (sel === 'custom') return (parseFloat(document.getElementById(customId).value) || 0) / 100;
+  return parseFloat(sel) || 0;
+}
+
+function gv(id) { return parseFloat(document.getElementById(id).value) || 0; }
+
+// ============ 正向计算 ============
+function calc() {
+  readRates();
+  const sellCurrCheck = document.getElementById('sellCurr').value;
+  const buyCurrCheck = document.getElementById('buyCurr').value;
+  const costCurrCheck = document.getElementById('costCurr').value;
+  const needJPY = [sellCurrCheck, buyCurrCheck, costCurrCheck].includes('JPY');
+  if (!ratesReady(needJPY)) return;
+
+  const sellPrice = gv('sellPrice');
+  const sellCurr = document.getElementById('sellCurr').value;
+  const buyPrice = gv('buyPrice');
+  const buyCurr = document.getElementById('buyCurr').value;
+  const quantity = parseInt(document.getElementById('quantity').value) || 0;
+  const extraCost = gv('extraCost');
+  const costCurr = document.getElementById('costCurr').value;
+
+  if (!sellPrice || !buyPrice || !quantity) { alert('请填写销售单价、采购单价和数量'); return; }
+
+  const isCNYBuy = buyCurr === 'CNY';
+  const rebateRate = isCNYBuy ? getRebateRate() : 0;
+
+  const unitRevCNY = toCNY(sellPrice, sellCurr);
+  const unitCostCNY = toCNY(buyPrice, buyCurr);
+  const totalExtraCNY = toCNY(extraCost, costCurr);
+  const unitFeeCNY = quantity > 0 ? totalExtraCNY / quantity : 0;
+
+  let unitRebateCNY = 0;
+  if (isCNYBuy && rebateRate > 0) unitRebateCNY = buyPrice / (1 + VAT) * rebateRate;
+
+  const unitProfitCNY = unitRevCNY - unitCostCNY + unitRebateCNY - unitFeeCNY;
+  const totalProfitCNY = unitProfitCNY * quantity;
+  const totalRevCNY = unitRevCNY * quantity;
+
+  const unitRevUSD = toUSD(unitRevCNY);
+  const unitCostUSD = toUSD(unitCostCNY);
+  const unitRebateUSD = toUSD(unitRebateCNY);
+  const unitFeeUSD = toUSD(unitFeeCNY);
+  const unitProfitUSD = toUSD(unitProfitCNY);
+  const totalRevUSD = unitRevUSD * quantity;
+  const totalCostUSD = unitCostUSD * quantity;
+  const totalRebateUSD = unitRebateUSD * quantity;
+  const totalFeeUSD = toUSD(totalExtraCNY);
+  const totalProfitUSD = unitProfitUSD * quantity;
+
+  const unitMargin = unitRevCNY > 0 ? (unitProfitCNY / unitRevCNY * 100) : 0;
+  const totalMargin = totalRevCNY > 0 ? (totalProfitCNY / totalRevCNY * 100) : 0;
+
+  document.getElementById('results').classList.remove('hidden');
+  document.getElementById('revResult').classList.add('hidden');
+
+  document.getElementById('r_uRev').textContent = fmtUSD(unitRevUSD);
+  document.getElementById('r_uCost').textContent = fmtUSD(unitCostUSD);
+  document.getElementById('r_uRebate').textContent = '+ ' + fmtUSD(unitRebateUSD);
+  document.getElementById('r_uRebateRow').style.display = isCNYBuy && rebateRate > 0 ? '' : 'none';
+  document.getElementById('r_uFee').textContent = fmtUSD(unitFeeUSD);
+  setProfit('r_uProfit', unitProfitUSD);
+  setBar('r_uBar', 'r_uMargin', unitMargin);
+
+  document.getElementById('r_tRev').textContent = fmtUSD(totalRevUSD);
+  document.getElementById('r_tCost').textContent = fmtUSD(totalCostUSD);
+  document.getElementById('r_tRebate').textContent = '+ ' + fmtUSD(totalRebateUSD);
+  document.getElementById('r_tRebateRow').style.display = isCNYBuy && rebateRate > 0 ? '' : 'none';
+  document.getElementById('r_tFee').textContent = fmtUSD(totalFeeUSD);
+  setProfit('r_tProfit', totalProfitUSD);
+  setBar('r_tBar', 'r_tMargin', totalMargin);
+
+  const tbody = document.getElementById('detailBody');
+  tbody.innerHTML = '';
+  addDetailRow(tbody, '销售收入', `${fmtCurr(sellPrice, sellCurr)} × ${quantity}`,
+    sellCurr === 'USD' ? '—' : `1 ${sellCurr} = ${(rates[sellCurr]/rates.USD).toFixed(4)} USD`,
+    fmtUSD(totalRevUSD));
+  addDetailRow(tbody, '采购成本', `${fmtCurr(buyPrice, buyCurr)} × ${quantity}`,
+    buyCurr === 'USD' ? '—' : `1 ${buyCurr} = ${(rates[buyCurr]/rates.USD).toFixed(4)} USD`,
+    '- ' + fmtUSD(totalCostUSD));
+  if (isCNYBuy && rebateRate > 0) {
+    addDetailRow(tbody, '出口退税', `¥${buyPrice} ÷ 1.13 × ${(rebateRate*100)}% × ${quantity}`, '—',
+      '+ ' + fmtUSD(totalRebateUSD), 'color:#16a34a');
+  }
+  if (extraCost > 0) {
+    addDetailRow(tbody, '预估费用', fmtCurr(extraCost, costCurr),
+      costCurr === 'USD' ? '—' : `1 ${costCurr} = ${(rates[costCurr]/rates.USD).toFixed(4)} USD`,
+      '- ' + fmtUSD(totalFeeUSD));
+  }
+  addDetailRow(tbody, '订单利润', '', '', fmtUSD(totalProfitUSD),
+    totalProfitUSD >= 0 ? 'color:#16a34a;font-weight:700' : 'color:#dc2626;font-weight:700', true);
+  addDetailRow(tbody, '利润率', '', '', totalMargin.toFixed(1) + '%',
+    totalMargin >= 20 ? 'color:#16a34a;font-weight:700' : totalMargin >= 0 ? 'color:#eab308;font-weight:700' : 'color:#dc2626;font-weight:700', true);
+
+  let note = `<b>汇率：</b>1 USD = ¥${rates.USD.toFixed(4)}`;
+  if (sellCurr === 'JPY' || buyCurr === 'JPY' || costCurr === 'JPY') note += ` · 1 JPY = ¥${rates.JPY}（固定值）`;
+  note += '<br>';
+  if (isCNYBuy && rebateRate > 0) note += `<b>退税计算：</b>¥${buyPrice} ÷ 1.13 × ${(rebateRate*100)}% = ¥${unitRebateCNY.toFixed(2)}/件<br>`;
+  note += `<b>利润公式：</b>销售收入 − 采购成本${isCNYBuy && rebateRate > 0 ? ' + 退税' : ''} − 费用 = 利润<br>`;
+  note += `<b>利润率：</b>利润 ÷ 销售收入 × 100%`;
+  if (!isCNYBuy) note += `<br><b>提示：</b>采购币种非人民币，未计算出口退税。`;
+  document.getElementById('calcNote').innerHTML = note;
+
+  document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+}
+
+function setProfit(id, val) {
+  const el = document.getElementById(id);
+  el.textContent = fmtUSD(val);
+  el.className = 'res-val profit ' + (val >= 0 ? 'green' : 'red');
+}
+function setBar(barId, textId, margin) {
+  const bar = document.getElementById(barId);
+  const txt = document.getElementById(textId);
+  const w = Math.min(Math.max(margin, 0), 100);
+  bar.style.width = w + '%';
+  bar.className = 'margin-fill ' + (margin >= 20 ? 'green' : margin >= 10 ? 'yellow' : 'red');
+  txt.textContent = `利润率 ${margin.toFixed(1)}%`;
+  txt.style.color = margin < 0 ? '#dc2626' : '#64748b';
+}
+function addDetailRow(tbody, label, orig, rate, result, style, isTotal) {
+  const tr = document.createElement('tr');
+  if (isTotal) tr.className = 'total';
+  tr.innerHTML = `<td>${label}</td><td>${orig}</td><td>${rate}</td><td class="num" style="${style||''}">${result}</td>`;
+  tbody.appendChild(tr);
+}
+
+// ============ 反向计算 ============
+function reverseCalc(mode) {
+  readRates();
+  let marginPct, knownPrice, knownCurr, resultCurr, rebateRate, isCNYBuy;
+  if (mode === 'sell2buy') {
+    marginPct = parseFloat(document.getElementById('revMarginS2B').value);
+    knownPrice = gv('revSellPrice');
+    knownCurr = document.getElementById('revSellCurr').value;
+    resultCurr = document.getElementById('revBuyCurrOut').value;
+    isCNYBuy = resultCurr === 'CNY';
+    rebateRate = isCNYBuy ? getRevRebateRate('s2b') : 0;
+    if (!knownPrice) { alert('请输入销售单价'); return; }
+  } else {
+    marginPct = parseFloat(document.getElementById('revMarginB2S').value);
+    knownPrice = gv('revBuyPrice');
+    knownCurr = document.getElementById('revBuyCurr').value;
+    resultCurr = document.getElementById('revSellCurrOut').value;
+    isCNYBuy = knownCurr === 'CNY';
+    rebateRate = isCNYBuy ? getRevRebateRate('b2s') : 0;
+    if (!knownPrice) { alert('请输入采购单价'); return; }
+  }
+  if (isNaN(marginPct)) { alert('请输入目标毛利率'); return; }
+  const m = marginPct / 100;
+  if (m >= 1) { alert('毛利率必须小于 100%'); return; }
+  if (!ratesReady([knownCurr, resultCurr].includes('JPY'))) return;
+
+  // 退税系数 k = 1 − 退税率/(1+VAT)
+  const k = 1 - rebateRate / (1 + VAT);
+
+  let resultPrice, cnyVal, title, label, formula, rebateInfo = '';
+
+  if (mode === 'sell2buy') {
+    const sellCNY = toCNY(knownPrice, knownCurr);
+    const buyCNY = sellCNY * (1 - m) / k;
+    resultPrice = fromCNY(buyCNY, resultCurr);
+    cnyVal = buyCNY;
+    title = '🎯 推算采购价';
+    label = `应采购价（${resultCurr}）`;
+    if (isCNYBuy && rebateRate > 0) {
+      formula = `采购价 = 销售价 × (1 − 毛利率) ÷ (1 − 退税率/1.13)<br>= ${fmtCurr(knownPrice, knownCurr)} × (1 − ${marginPct}%) ÷ (1 − ${(rebateRate*100)}%/1.13)`;
+      const rebateCNY = buyCNY / (1 + VAT) * rebateRate;
+      rebateInfo = `<b>退税额：</b>¥${buyCNY.toFixed(2)} ÷ 1.13 × ${(rebateRate*100)}% = ¥${rebateCNY.toFixed(2)}<br>`;
+    } else {
+      formula = `采购价 = 销售价 × (1 − 毛利率) = ${fmtCurr(knownPrice, knownCurr)} × (1 − ${marginPct}%)`;
+    }
+  } else {
+    const buyCNY = toCNY(knownPrice, knownCurr);
+    const sellCNY = buyCNY * k / (1 - m);
+    resultPrice = fromCNY(sellCNY, resultCurr);
+    cnyVal = sellCNY;
+    title = '🎯 推算销售价';
+    label = `应报销售价（${resultCurr}）`;
+    if (isCNYBuy && rebateRate > 0) {
+      formula = `销售价 = 采购价 × (1 − 退税率/1.13) ÷ (1 − 毛利率)<br>= ${fmtCurr(knownPrice, knownCurr)} × (1 − ${(rebateRate*100)}%/1.13) ÷ (1 − ${marginPct}%)`;
+      const rebateCNY = buyCNY / (1 + VAT) * rebateRate;
+      rebateInfo = `<b>退税额：</b>¥${buyCNY.toFixed(2)} ÷ 1.13 × ${(rebateRate*100)}% = ¥${rebateCNY.toFixed(2)}<br>`;
+    } else {
+      formula = `销售价 = 采购价 ÷ (1 − 毛利率) = ${fmtCurr(knownPrice, knownCurr)} ÷ (1 − ${marginPct}%)`;
+    }
+  }
+
+  document.getElementById('revResult').classList.remove('hidden');
+  document.getElementById('results').classList.add('hidden');
+  document.getElementById('revResultTitle').textContent = title;
+  document.getElementById('revResultLabel').textContent = label;
+  document.getElementById('revResultVal').textContent = fmtCurr(resultPrice, resultCurr);
+  document.getElementById('revResultCNY').textContent = fmtCurr(cnyVal, 'CNY');
+  document.getElementById('revResultUSD').textContent = fmtUSD(toUSD(cnyVal));
+
+  let note = `<b>汇率：</b>1 USD = ¥${rates.USD.toFixed(4)}`;
+  if ([knownCurr, resultCurr].includes('JPY')) note += ` · 1 JPY = ¥${rates.JPY}（固定值）`;
+  note += `<br><b>公式：</b>${formula}<br>`;
+  if (rebateInfo) note += rebateInfo;
+  note += `<b>说明：</b>已考虑${isCNYBuy && rebateRate > 0 ? '出口退税，' : ''}未计入运费、报关等其他费用。如需完整成本测算请切换到"完整利润测算"。`;
+  document.getElementById('revNote').innerHTML = note;
+
+  document.getElementById('revResult').scrollIntoView({ behavior: 'smooth' });
+}
+
+// 回车触发
+document.querySelectorAll('input').forEach(el => {
+  el.addEventListener('keyup', e => {
+    if (e.key !== 'Enter') return;
+    const active = document.querySelector('.tab.active').dataset.mode;
+    if (active === 'full') calc();
+    else reverseCalc(active);
+  });
+});
+</script>
+</body>
+</html>
