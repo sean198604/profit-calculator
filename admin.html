@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>">
+<title>Admin — 利润计算器后台</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif; background:#f0f4f8; color:#1a202c; min-height:100vh; }
+
+  /* ===== 登录页 ===== */
+  #loginPage {
+    display:flex; align-items:center; justify-content:center; min-height:100vh;
+    background:linear-gradient(135deg,#0f4c3a 0%,#1a7a5a 100%);
+  }
+  .login-box {
+    background:white; border-radius:18px; padding:40px 36px; width:360px;
+    box-shadow:0 20px 60px rgba(0,0,0,0.25);
+  }
+  .login-box h2 { font-size:22px; color:#0f4c3a; margin-bottom:6px; font-weight:800; }
+  .login-box p  { font-size:13px; color:#94a3b8; margin-bottom:28px; }
+  .login-field  { margin-bottom:18px; }
+  .login-field label { display:block; font-size:12px; font-weight:700; color:#475569; margin-bottom:6px; }
+  .login-field input {
+    width:100%; padding:11px 14px; border:2px solid #e2e8f0; border-radius:10px;
+    font-size:15px; outline:none; transition:border-color .2s;
+  }
+  .login-field input:focus { border-color:#1a7a5a; }
+  .login-err { font-size:12px; color:#dc2626; margin-bottom:12px; min-height:18px; }
+  .btn-login {
+    width:100%; padding:13px; background:linear-gradient(135deg,#0f4c3a,#1a7a5a);
+    color:white; border:none; border-radius:10px; font-size:15px; font-weight:700;
+    cursor:pointer; transition:all .2s;
+  }
+  .btn-login:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(15,76,58,.35); }
+
+  /* ===== 后台主界面 ===== */
+  #adminPage { display:none; }
+
+  .top-bar {
+    background:linear-gradient(135deg,#0f4c3a 0%,#1a7a5a 100%);
+    color:white; padding:16px 28px; display:flex; align-items:center; justify-content:space-between;
+    box-shadow:0 4px 20px rgba(0,0,0,.15); position:sticky; top:0; z-index:100;
+  }
+  .top-bar h1 { font-size:18px; font-weight:800; }
+  .top-bar .nav { display:flex; gap:8px; }
+  .nav-btn {
+    padding:7px 16px; background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.3);
+    color:white; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600; transition:all .2s;
+  }
+  .nav-btn:hover, .nav-btn.active { background:rgba(255,255,255,.28); }
+  .top-bar .logout {
+    padding:7px 14px; background:rgba(220,38,38,.25); border:1px solid rgba(220,38,38,.5);
+    color:white; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600; transition:all .2s;
+  }
+  .top-bar .logout:hover { background:rgba(220,38,38,.4); }
+
+  .main { max-width:860px; margin:0 auto; padding:28px 20px 60px; }
+
+  /* ===== 卡片 ===== */
+  .card { background:white; border-radius:14px; padding:26px; margin-bottom:18px; box-shadow:0 2px 12px rgba(0,0,0,.06); border:1px solid #e8ecf1; }
+  .card-title { font-size:15px; font-weight:800; color:#0f4c3a; margin-bottom:20px; display:flex; align-items:center; gap:8px; }
+
+  .section { display:none; }
+  .section.active { display:block; }
+
+  /* ===== 表单 ===== */
+  .form-row { display:flex; gap:14px; flex-wrap:wrap; margin-bottom:16px; }
+  .form-group { flex:1; min-width:160px; }
+  .form-group label { display:block; font-size:12px; font-weight:700; color:#475569; margin-bottom:6px; }
+  .form-group input, .form-group select {
+    width:100%; padding:10px 12px; border:2px solid #e2e8f0; border-radius:10px;
+    font-size:15px; font-weight:600; outline:none; background:#f8fafc; color:#1a202c; transition:all .2s;
+  }
+  .form-group input:focus, .form-group select:focus { border-color:#1a7a5a; background:white; box-shadow:0 0 0 3px rgba(26,122,90,.1); }
+  .form-group .hint { font-size:11px; color:#94a3b8; margin-top:3px; }
+
+  .btn-save {
+    display:inline-flex; align-items:center; gap:6px;
+    padding:11px 24px; background:linear-gradient(135deg,#0f4c3a,#1a7a5a);
+    color:white; border:none; border-radius:10px; font-size:14px; font-weight:700;
+    cursor:pointer; transition:all .2s; margin-top:4px;
+  }
+  .btn-save:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(15,76,58,.3); }
+
+  .save-toast {
+    display:inline-block; margin-left:14px; font-size:13px; color:#16a34a; font-weight:600;
+    opacity:0; transition:opacity .3s;
+  }
+  .save-toast.show { opacity:1; }
+
+  /* ===== 信息块 ===== */
+  .info-box { background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:14px 16px; margin-bottom:18px; font-size:13px; color:#166534; line-height:1.8; }
+  .info-box b { color:#0f4c3a; }
+
+  /* ===== 日志表格 ===== */
+  .log-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .log-count { font-size:13px; color:#64748b; }
+  .btn-clear-log {
+    padding:6px 14px; background:#fef2f2; border:1px solid #fecaca;
+    color:#dc2626; border-radius:8px; cursor:pointer; font-size:12px; font-weight:600; transition:all .2s;
+  }
+  .btn-clear-log:hover { background:#fee2e2; }
+
+  .log-table { width:100%; border-collapse:collapse; font-size:13px; }
+  .log-table th { background:#f1f5f9; padding:10px 12px; text-align:left; font-weight:700; color:#475569; border:1px solid #e2e8f0; white-space:nowrap; }
+  .log-table td { padding:10px 12px; border:1px solid #e2e8f0; color:#334155; vertical-align:top; }
+  .log-table tr:hover td { background:#f8fafc; }
+  .log-table .tag {
+    display:inline-block; padding:2px 8px; border-radius:5px; font-size:11px; font-weight:700;
+  }
+  .log-table .tag.param { background:#dbeafe; color:#1e40af; }
+  .log-table .tag.rate  { background:#dcfce7; color:#166534; }
+  .log-empty { text-align:center; padding:40px; color:#94a3b8; font-size:14px; }
+
+  /* ===== 当前配置预览 ===== */
+  .config-preview { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:18px; }
+  .cfg-chip {
+    background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px;
+    padding:10px 16px; font-size:13px; color:#166534;
+  }
+  .cfg-chip b { display:block; font-size:11px; font-weight:700; color:#64748b; margin-bottom:2px; }
+
+  @media (max-width:640px) {
+    .form-row { flex-direction:column; }
+    .form-group { min-width:100%; }
+    .top-bar { flex-wrap:wrap; gap:10px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== 登录页 ===== -->
+<div id="loginPage">
+  <div class="login-box">
+    <h2>⚙️ 后台管理</h2>
+    <p>利润计算器 · Admin</p>
+    <div class="login-field">
+      <label>账号</label>
+      <input type="text" id="loginUser" placeholder="admin" autocomplete="username">
+    </div>
+    <div class="login-field">
+      <label>密码</label>
+      <input type="password" id="loginPwd" placeholder="••••" autocomplete="current-password" onkeyup="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="login-err" id="loginErr"></div>
+    <button class="btn-login" onclick="doLogin()">登录</button>
+  </div>
+</div>
+
+<!-- ===== 后台主界面 ===== -->
+<div id="adminPage">
+  <div class="top-bar">
+    <h1>⚙️ 利润计算器 · 后台管理</h1>
+    <div class="nav">
+      <button class="nav-btn active" onclick="switchSection('params')" id="navParams">⚙️ 参数设置</button>
+      <button class="nav-btn" onclick="switchSection('logs')" id="navLogs">📋 修改日志</button>
+      <a href="/" style="text-decoration:none"><button class="nav-btn">🔗 前往计算器</button></a>
+    </div>
+    <button class="logout" onclick="doLogout()">退出登录</button>
+  </div>
+
+  <div class="main">
+
+    <!-- ===== 参数设置 ===== -->
+    <div class="section active" id="sectionParams">
+
+      <!-- 当前配置预览 -->
+      <div class="card">
+        <div class="card-title">📊 当前生效配置</div>
+        <div class="config-preview" id="configPreview"></div>
+        <div style="font-size:12px;color:#94a3b8;">配置保存后立即对计算器生效。</div>
+      </div>
+
+      <!-- 汇率参数 -->
+      <div class="card">
+        <div class="card-title">💴 日元汇率（JPY 固定值）</div>
+        <div class="info-box">
+          <b>说明：</b>USD 汇率由系统自动从 5050 服务获取，无需在此配置。<br>
+          JPY 汇率为固定参考值，可在此处修改（如：1 日元 = 0.0478 人民币）。
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="max-width:220px;">
+            <label>1 JPY = ? CNY</label>
+            <input type="number" id="cfgJPY" step="0.0001" min="0.001" max="1" placeholder="0.0478">
+            <div class="hint">例：0.0478（1日元≈0.0478元人民币）</div>
+          </div>
+        </div>
+        <button class="btn-save" onclick="saveConfig('rate')">💾 保存汇率设置</button>
+        <span class="save-toast" id="toastRate">✅ 已保存</span>
+      </div>
+
+      <!-- 计算公式参数 -->
+      <div class="card">
+        <div class="card-title">🧮 计算公式参数</div>
+        <div class="info-box">
+          <b>退税公式：</b>退税额 = 采购含税价 ÷ (1 + 增值税率) × 退税率<br>
+          <b>毛利率公式：</b>毛利率 = 利润 ÷ 销售收入 × 100%
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="max-width:220px;">
+            <label>增值税率（VAT）%</label>
+            <input type="number" id="cfgVAT" step="0.01" min="1" max="25" placeholder="13">
+            <div class="hint">默认 13%（适用于一般纳税人）</div>
+          </div>
+          <div class="form-group" style="max-width:220px;">
+            <label>USD 离线默认汇率</label>
+            <input type="number" id="cfgDefaultUSD" step="0.0001" min="1" max="20" placeholder="6.8">
+            <div class="hint">5050 服务不可用时的回退值</div>
+          </div>
+        </div>
+        <button class="btn-save" onclick="saveConfig('formula')">💾 保存公式参数</button>
+        <span class="save-toast" id="toastFormula">✅ 已保存</span>
+      </div>
+
+    </div>
+
+    <!-- ===== 修改日志 ===== -->
+    <div class="section" id="sectionLogs">
+      <div class="card">
+        <div class="card-title">📋 修改日志</div>
+        <div class="log-header">
+          <span class="log-count" id="logCount">共 0 条记录</span>
+          <button class="btn-clear-log" onclick="clearLogs()">🗑️ 清空日志</button>
+        </div>
+        <div id="logContainer"></div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /adminPage -->
+
+<script>
+// ===== 常量 =====
+const ADMIN_USER = 'admin';
+const ADMIN_PWD  = '1234';
+const CFG_KEY    = 'profitCalcConfig';
+const LOG_KEY    = 'profitCalcLogs';
+
+// ===== 默认配置 =====
+const DEFAULT_CONFIG = {
+  jpyRate:    0.0478,
+  vat:        13,
+  defaultUSD: 6.8
+};
+
+// ===== 配置读写 =====
+function loadConfig() {
+  try {
+    const s = localStorage.getItem(CFG_KEY);
+    return s ? Object.assign({}, DEFAULT_CONFIG, JSON.parse(s)) : Object.assign({}, DEFAULT_CONFIG);
+  } catch(e) { return Object.assign({}, DEFAULT_CONFIG); }
+}
+function saveConfigData(data) {
+  localStorage.setItem(CFG_KEY, JSON.stringify(data));
+}
+
+// ===== 日志读写 =====
+function loadLogs() {
+  try {
+    const s = localStorage.getItem(LOG_KEY);
+    return s ? JSON.parse(s) : [];
+  } catch(e) { return []; }
+}
+function appendLog(type, fields) {
+  const logs = loadLogs();
+  logs.unshift({
+    id: Date.now(),
+    time: new Date().toLocaleString('zh-CN', { hour12:false }),
+    type,   // 'rate' | 'param'
+    fields  // [{label, before, after}]
+  });
+  // 最多保留 200 条
+  if (logs.length > 200) logs.length = 200;
+  localStorage.setItem(LOG_KEY, JSON.stringify(logs));
+}
+
+// ===== 登录 =====
+function doLogin() {
+  const u = document.getElementById('loginUser').value.trim();
+  const p = document.getElementById('loginPwd').value;
+  if (u === ADMIN_USER && p === ADMIN_PWD) {
+    document.getElementById('loginPage').style.display = 'none';
+    document.getElementById('adminPage').style.display = 'block';
+    initAdmin();
+  } else {
+    const err = document.getElementById('loginErr');
+    err.textContent = '账号或密码错误，请重试。';
+    document.getElementById('loginPwd').value = '';
+    document.getElementById('loginPwd').focus();
+    // 抖动
+    const box = document.querySelector('.login-box');
+    box.style.animation = 'none';
+    setTimeout(() => { box.style.animation = 'shake .4s'; }, 10);
+  }
+}
+function doLogout() {
+  document.getElementById('adminPage').style.display = 'none';
+  document.getElementById('loginPage').style.display = 'flex';
+  document.getElementById('loginPwd').value = '';
+  document.getElementById('loginErr').textContent = '';
+}
+
+// ===== 初始化后台 =====
+function initAdmin() {
+  const cfg = loadConfig();
+  document.getElementById('cfgJPY').value       = cfg.jpyRate;
+  document.getElementById('cfgVAT').value       = cfg.vat;
+  document.getElementById('cfgDefaultUSD').value = cfg.defaultUSD;
+  renderConfigPreview(cfg);
+  renderLogs();
+}
+
+// ===== 配置预览 =====
+function renderConfigPreview(cfg) {
+  document.getElementById('configPreview').innerHTML = `
+    <div class="cfg-chip"><b>JPY 汇率</b>1 JPY = ${cfg.jpyRate} CNY</div>
+    <div class="cfg-chip"><b>增值税率（VAT）</b>${cfg.vat}%</div>
+    <div class="cfg-chip"><b>USD 离线默认值</b>${cfg.defaultUSD}</div>
+  `;
+}
+
+// ===== 保存配置 =====
+function saveConfig(section) {
+  const cfg = loadConfig();
+  const changes = [];
+
+  if (section === 'rate') {
+    const newJPY = parseFloat(document.getElementById('cfgJPY').value);
+    if (isNaN(newJPY) || newJPY <= 0) { alert('请输入有效的日元汇率（正数）'); return; }
+    if (newJPY !== cfg.jpyRate) {
+      changes.push({ label:'JPY 汇率', before: cfg.jpyRate, after: newJPY });
+      cfg.jpyRate = newJPY;
+    }
+    showToast('toastRate');
+  }
+
+  if (section === 'formula') {
+    const newVAT = parseFloat(document.getElementById('cfgVAT').value);
+    const newUSD = parseFloat(document.getElementById('cfgDefaultUSD').value);
+    if (isNaN(newVAT) || newVAT <= 0 || newVAT > 25) { alert('增值税率请输入 1~25 之间的数值'); return; }
+    if (isNaN(newUSD) || newUSD <= 0) { alert('请输入有效的 USD 默认汇率'); return; }
+    if (newVAT !== cfg.vat) {
+      changes.push({ label:'增值税率(VAT)', before: cfg.vat + '%', after: newVAT + '%' });
+      cfg.vat = newVAT;
+    }
+    if (newUSD !== cfg.defaultUSD) {
+      changes.push({ label:'USD 离线默认值', before: cfg.defaultUSD, after: newUSD });
+      cfg.defaultUSD = newUSD;
+    }
+    showToast('toastFormula');
+  }
+
+  saveConfigData(cfg);
+  renderConfigPreview(cfg);
+
+  if (changes.length > 0) {
+    appendLog(section === 'rate' ? 'rate' : 'param', changes);
+  }
+}
+
+function showToast(id) {
+  const el = document.getElementById(id);
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ===== 日志渲染 =====
+function renderLogs() {
+  const logs = loadLogs();
+  document.getElementById('logCount').textContent = `共 ${logs.length} 条记录`;
+  const container = document.getElementById('logContainer');
+
+  if (logs.length === 0) {
+    container.innerHTML = '<div class="log-empty">📭 暂无修改记录</div>';
+    return;
+  }
+
+  let html = `<table class="log-table">
+    <thead><tr><th>时间</th><th>类型</th><th>修改字段</th><th>修改前</th><th>修改后</th></tr></thead>
+    <tbody>`;
+
+  logs.forEach(log => {
+    const typeTag = log.type === 'rate'
+      ? '<span class="tag rate">汇率</span>'
+      : '<span class="tag param">参数</span>';
+    log.fields.forEach((f, i) => {
+      html += `<tr>
+        ${i === 0 ? `<td rowspan="${log.fields.length}" style="white-space:nowrap;">${log.time}</td>` : ''}
+        ${i === 0 ? `<td rowspan="${log.fields.length}">${typeTag}</td>` : ''}
+        <td>${f.label}</td>
+        <td style="color:#94a3b8;">${f.before}</td>
+        <td style="color:#0f4c3a;font-weight:700;">${f.after}</td>
+      </tr>`;
+    });
+  });
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+function clearLogs() {
+  if (!confirm('确定要清空所有修改日志吗？此操作不可撤销。')) return;
+  localStorage.removeItem(LOG_KEY);
+  renderLogs();
+}
+
+// ===== Tab 切换 =====
+function switchSection(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('section' + name.charAt(0).toUpperCase() + name.slice(1)).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('nav' + name.charAt(0).toUpperCase() + name.slice(1)).classList.add('active');
+  if (name === 'logs') renderLogs();
+}
+
+// ===== 回车登录 =====
+document.getElementById('loginUser').addEventListener('keyup', e => { if (e.key === 'Enter') document.getElementById('loginPwd').focus(); });
+
+// ===== shake 动画 =====
+const style = document.createElement('style');
+style.textContent = `@keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-8px)} 40%,80%{transform:translateX(8px)} }`;
+document.head.appendChild(style);
+</script>
+</body>
+</html>

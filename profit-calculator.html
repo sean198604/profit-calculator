@@ -401,15 +401,22 @@
 
 <div class="footer">
   📌 USD 汇率取自中国银行现汇买入价，JPY 为固定参考值，实际结汇请以银行当日牌价为准<br>
-  退税公式：采购含税价 ÷ 1.13 × 退税率（增值税率 13%）
+  退税公式：采购含税价 ÷ 1.13 × 退税率（增值税率 13%）<br>
+  <a href="/admin.html" style="color:#cbd5e1;font-size:10px;text-decoration:none;opacity:0.5;">⚙ 后台管理</a>
 </div>
 
 <script>
 // ============ 汇率（1 外币 = ? CNY）============
-// JPY 固定值，USD 从 5050 服务自动拉取
-const JPY_FIXED = 0.0478;
+// 从 Admin 配置读取，Admin 未设置则用默认值
+const CFG_KEY = 'profitCalcConfig';
+function _adminCfg() {
+  try { return JSON.parse(localStorage.getItem(CFG_KEY) || '{}'); } catch(e) { return {}; }
+}
+const JPY_FIXED   = parseFloat(_adminCfg().jpyRate)    || 0.0478;
+const VAT_RATE    = parseFloat(_adminCfg().vat)        || 13;
+const VAT         = VAT_RATE / 100;
+const DEFAULT_USD = parseFloat(_adminCfg().defaultUSD) || 6.8;
 let rates = { CNY: 1, USD: 0, JPY: JPY_FIXED };
-const VAT = 0.13;
 
 function readRates() {
   rates.USD = parseFloat(document.getElementById('rUSD').value) || 0;
@@ -462,12 +469,11 @@ async function fetchUSDRate() {
     }
     throw new Error('数据为空');
   } catch(e) {
-    // 获取失败，使用默认值 6.8
-    const DEFAULT_USD = 6.8;
+    // 获取失败，使用 Admin 配置的默认值（或 6.8）
     rates.USD = DEFAULT_USD;
     document.getElementById('rUSD').value = DEFAULT_USD.toFixed(4);
     dot.className = 'rate-dot offline';
-    timeEl.textContent = '已离线，使用默认值 6.8';
+    timeEl.textContent = `已离线，使用默认值 ${DEFAULT_USD}`;
   }
 }
 
