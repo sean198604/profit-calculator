@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/readme-cover.png" alt="Profit Calculator project cover" width="100%" /></p>
+
 # 外贸利润计算器 (Profit Calculator)
 
 快速计算外贸订单成本与利润空间的在线工具。
